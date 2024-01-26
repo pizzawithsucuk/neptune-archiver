@@ -1,3 +1,5 @@
+import os
+
 import neptune
 from pathlib import Path
 from neptune.attributes import FileSet, Boolean, Datetime, File, Float, GitRef, Integer, NotebookRef, RunState, String, \
@@ -7,106 +9,126 @@ import json
 import pandas as pd
 from src import __version__
 from datetime import datetime
-import config
+import zipfile
+import src.utils as utils
+from src.utils import RemoteKeys
+from typing import (
+    Iterable,
+    Optional,
+    Union,
+)
 
 
-class RunArchiver:
-
-    def __init__(self, project_id, run_id, project_path):
-        self.project_id = project_id
-        self.run_id = run_id
-        self.run_path = Path(project_path / run_id)
-        self.run_path.mkdir(exist_ok=True)
-
-    def archive(self):
-        run = neptune.init_run(with_id=self.run_id, project=self.project_id, mode='read-only')
-        run_structure = run.get_structure()
-        traversed_run_structure = traverse_structure(run_structure, path=self.run_path)
-        with (self.run_path / config.RUN_STRUCTURE).open(mode='w') as json_file:
-            json.dump(traversed_run_structure, json_file, indent=4)
-        run.stop()
-
-
-def traverse_structure(structure, path):
-    cloned_structure = {}
-    for key in structure.keys():
-        if isinstance(structure[key], dict):
-            cloned_structure[key] = traverse_structure(structure[key], path)
-        elif isinstance(structure[key], (RunState, GitRef)):
-            pass  # run state is not mutable on client side and should not be stored
-            # ignore gitref for now
-        else:
-            cloned_structure[key] = {'type': str(type(structure[key])), 'value': fetch(structure[key], path)}
-    return cloned_structure
-
-
-def fetch_series(series, destination: Path):
-    values = series.fetch_values()
-    file_id = str(uuid.uuid4()) + '.csv'
-    values.to_csv(path_or_buf=destination / file_id, index=False)
-    return file_id
-
-
-def fetch_fileset(fileset, destination: Path):
-    file_id = str(uuid.uuid4()) + '.zip'
-    fileset.download(str(destination / file_id))
-    return str(file_id)
-
-
-def fetch_file(file, destination: Path):
-    file_id = str(uuid.uuid4())
-    file.download(str(destination / file_id))
-    return str(file_id)
-
-
-def fetch(value, destination: Path):
-    if isinstance(value, (Boolean, Float, Integer, String)):
-        return value.fetch()
-    if isinstance(value, Datetime):
-        return value.fetch().timestamp()
-    if isinstance(value, StringSet):
-        return list(value.fetch())
-    elif isinstance(value, (FloatSeries, StringSeries)):
-        return fetch_series(value, destination)
-    elif isinstance(value, File):
-        return fetch_file(value, destination)
-    elif isinstance(value, FileSet):
-        return fetch_fileset(value, destination)
-    else:
-        raise NameError("Unknown Type", value, " ", type(value))
-
+# TODO implement multiprocessing
 
 class Archiver:
-
-    def __init__(self, project_id, destination):
+    def __init__(self, destination: Path, archive_name=None, project_id: Optional[str] = None):
         self.project_id = project_id
-        self.project = neptune.init_project(project=project_id, mode='read-only')
+        self.project = neptune.init_project(project=self.project_id, mode='read-only')
         self.runs_table = self.project.fetch_runs_table().to_pandas()
         self.run_ids = self.runs_table.loc[:, 'sys/id'].tolist()
-        self.project_path = destination / self.project_id
-        self.project_path.mkdir(parents=True, exist_ok=True)
+        if not archive_name:
+            archive_name = self.project['sys/name'].fetch()
+        self.destination = destination / archive_name
+        self.destination.mkdir()
 
-    def archive(self):
-        # TODO implement multiprocessing
-        self.make_archive_info()
-        self.archive_metadata()
+    def archive(self, store_runs_table=True):
+        self.make_archive_log()
+        self.archive_project()
+        self.archive_runs()
+        if store_runs_table:
+            self.runs_table.to_csv(path_or_buf=self.destination / utils.RUNS_TABLE, index=False)
+
+    def archive_project(self):
+        project_neptune_structure = self.project.get_structure()
+        neptune_obj_archiver = NeptuneObjArchiver(self.destination)
+        neptune_obj_archiver.archive(project_neptune_structure, utils.PROJECT_STRUCTURE)
+
+    def archive_runs(self):
         for run_id in self.run_ids:
-            run_archiver = RunArchiver(self.project_id, run_id, self.project_path)
-            run_archiver.archive()
+            run = neptune.init_run(with_id=run_id, project=self.project_id, mode='read-only')
+            run_neptune_structure = run.get_structure()
+            (self.destination / run_id).mkdir()
+            neptune_obj_archiver = NeptuneObjArchiver(destination=self.destination / run_id)
+            neptune_obj_archiver.archive(run_neptune_structure, utils.RUN_STRUCTURE)
+            run.stop()
 
-    def archive_metadata(self):
-        project_structure = self.project.get_structure()
-        traversed_project_structure = traverse_structure(project_structure, path=self.project_path)
-        with (self.project_path / config.PROJECT_STRUCTURE).open(mode='w') as json_file:
-            json.dump(traversed_project_structure, json_file, indent=4)
-
-    def make_archive_info(self):
+    def make_archive_log(self):
         archive_info = {'archiver_version': __version__, 'datetime': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                         'neptune_version': neptune.__version__}
-        with (self.project_path / config.ARCHIVE_INFO).open(mode='w') as json_file:
+        with (self.destination / utils.ARCHIVE_INFO).open(mode='w') as json_file:
             json.dump(archive_info, json_file, indent=4)
 
 
+class NeptuneObjArchiver:
+    def __init__(self, destination):
+        self.local_structure = {remote_key.value: {} for remote_key in RemoteKeys}
+        self.destination = destination
+
+    def archive(self, neptune_structure, string_id):
+        self.traverse_neptune_structure(neptune_structure)
+        with (self.destination / string_id).open(mode='w') as json_file:
+            json.dump(self.local_structure, json_file, indent=4)
+
+    def traverse_neptune_structure(self, neptune_structure, concatenated_key=''):
+        for key in neptune_structure.keys():
+            if isinstance(neptune_structure[key], dict):
+                self.traverse_neptune_structure(neptune_structure[key], concatenated_key + '/' + key)
+            else:
+                self.fetch(neptune_structure[key], concatenated_key + '/' + key)
+
+    def fetch(self, value, concatenated_key):
+        concatenated_key = concatenated_key[1:]  # remove first /
+        if isinstance(value, (Boolean, Float, Integer, String)):
+            self.local_structure[RemoteKeys.ATOMS.value][concatenated_key] = value.fetch()
+        elif isinstance(value, Datetime):
+            self.local_structure[RemoteKeys.TIME_STAMPS.value][concatenated_key] = value.fetch().timestamp()
+        elif isinstance(value, StringSet):
+            self.local_structure[RemoteKeys.STRING_SETS.value][concatenated_key] = list(value.fetch())
+        elif isinstance(value, FloatSeries):
+            self.local_structure[RemoteKeys.FLOAT_SERIES.value][concatenated_key] = self.fetch_series(value)
+        elif isinstance(value, StringSeries):
+            self.local_structure[RemoteKeys.STRING_SERIES.value][concatenated_key] = self.fetch_series(value)
+        elif isinstance(value, File):
+            self.local_structure[RemoteKeys.FILES.value][concatenated_key] = self.fetch_file(value)
+        elif isinstance(value, FileSet):
+            self.local_structure[RemoteKeys.FILE_SETS.value][concatenated_key] = self.fetch_fileset(value)
+        elif isinstance(value, FileSeries):
+            #  TODO continue from here
+            self.local_structure[RemoteKeys.FILE_SERIES.value][concatenated_key] = self.fetch_file(value)
+        elif isinstance(value, RunState):
+            pass  # RunState should not be logged as it is not mutable on client side
+        elif isinstance(value, GitRef):
+            pass
+            #  TODO neptune currently does not seem to support GitRref Querying
+        else:
+            raise NameError("Unknown Type", value, " ", type(value))
+
+    def fetch_series(self, series):
+        series_df = series.fetch_values()
+        file_id = str(uuid.uuid4()) + '.csv'
+        if not len(series_df.columns) == 0:  # neptune returns an empty dataframe with no columns for when a monitoring
+            # string` series is empty. Not sure what happens to other series empty series, so the condition is if there
+            # are no column names. Then return None such that Restorer knows what to do.
+            series_df['timestamp'] = series_df['timestamp'].apply(lambda x: x.timestamp())
+            series_df.to_csv(path_or_buf=self.destination / file_id, index=False)
+            return file_id
+        return None
+
+    def fetch_fileset(self, fileset):
+        file_id = str(uuid.uuid4())
+        fileset.download(str(self.destination / (file_id + '.zip')))
+        with zipfile.ZipFile(self.destination / (file_id + '.zip'), 'r') as zip_ref:
+            zip_ref.extractall(self.destination / file_id)
+        (self.destination / (file_id + '.zip')).unlink()
+        return file_id
+
+    def fetch_file(self, file):
+        file_id = str(uuid.uuid4())
+        file.download(str(self.destination / file_id))
+        return file_id
+
+
 if __name__ == '__main__':
-    archiver = Archiver(project_id='tns/scratch', destination=Path('/Users/rathjjgf/Desktop'))
+    archiver = Archiver(project_id='tns/scratch', destination=Path('/Users/rathjjgf/Desktop/lel'))
     archiver.archive()
