@@ -1,22 +1,15 @@
-import os
-
 import neptune
 from pathlib import Path
 from neptune.attributes import FileSet, Boolean, Datetime, File, Float, GitRef, Integer, NotebookRef, RunState, String, \
     Artifact, FloatSeries, StringSeries, FileSeries, StringSet
 import uuid
 import json
-import pandas as pd
 from src import __version__
 from datetime import datetime
 import zipfile
 import src.utils as utils
 from src.utils import RemoteKeys
-from typing import (
-    Iterable,
-    Optional,
-    Union,
-)
+from typing import Optional
 
 
 # TODO implement multiprocessing
@@ -127,8 +120,3 @@ class NeptuneObjArchiver:
         file_id = str(uuid.uuid4())
         file.download(str(self.destination / file_id))
         return file_id
-
-
-if __name__ == '__main__':
-    archiver = Archiver(project_id='tns/scratch', destination=Path('/Users/rathjjgf/Desktop/lel'))
-    archiver.archive()

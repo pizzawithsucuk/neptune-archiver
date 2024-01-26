@@ -16,7 +16,6 @@ def archive(args):
 
 def retrieve(args):
     retriever = Retriever(Path(args.source), args.workspace, args.project_name, args.alternative_sys_namespace)
-    print(args.no_project_creation)
     retriever.restore(args.no_project_creation, args.visibility, args.key)
 
 
