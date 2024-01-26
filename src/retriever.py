@@ -37,7 +37,7 @@ class Retriever:
             key = project_info['atoms'].get('sys/key')
         if not visibility:
             # visibility = project_info['atoms']['sys/key']
-            # TODO set to 'priv' now as there is seems to be some inconsistency across neptune version.
+            # TODO set to 'priv' now as there is seems to be some inconsistency across neptune version
             visibility = 'priv'
         management.create_project(workspace=workspace, name=name, key=key, visibility=visibility)
 
@@ -90,7 +90,7 @@ class Retriever:
     @staticmethod
     def traverse_string_series(series, neptune_object, source):
         for key in series.keys():
-            if not series[key] is None:  # see comment on fetch_series
+            if not series[key] is None:  # see comment on fetch_series in archiver.py
                 series_df = pd.read_csv(filepath_or_buffer=source / series[key], na_filter=False)
                 neptune_object[key].extend(values=series_df['value'].tolist(), steps=series_df['step'].tolist(),
                                            timestamps=series_df['timestamp'].tolist())
@@ -98,7 +98,7 @@ class Retriever:
     @staticmethod
     def traverse_float_series(series, neptune_object, source):
         for key in series.keys():
-            if not series[key] is None:  # see comment on fetch_series
+            if not series[key] is None:  # see comment on fetch_series in archiver.py
                 series_df = pd.read_csv(filepath_or_buffer=source / series[key])
                 neptune_object[key].extend(values=series_df['value'].tolist(), steps=series_df['step'].tolist(),
                                            timestamps=series_df['timestamp'].tolist())

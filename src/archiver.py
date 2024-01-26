@@ -54,6 +54,9 @@ class Archiver:
 
 
 class NeptuneObjArchiver:
+    # Class is used to recursively crawl through a neptune object (run or project) and store all data at a local
+    # directory
+
     def __init__(self, destination):
         self.local_structure = {remote_key.value: {} for remote_key in RemoteKeys}
         self.destination = destination
@@ -87,7 +90,7 @@ class NeptuneObjArchiver:
         elif isinstance(value, FileSet):
             self.local_structure[RemoteKeys.FILE_SETS.value][concatenated_key] = self.fetch_fileset(value)
         elif isinstance(value, FileSeries):
-            #  TODO continue from here
+            #  TODO Figure out how to deal with descriptions/names of file series elements
             self.local_structure[RemoteKeys.FILE_SERIES.value][concatenated_key] = self.fetch_file(value)
         elif isinstance(value, RunState):
             pass  # RunState should not be logged as it is not mutable on client side
@@ -101,7 +104,7 @@ class NeptuneObjArchiver:
         series_df = series.fetch_values()
         file_id = str(uuid.uuid4()) + '.csv'
         if not len(series_df.columns) == 0:  # neptune returns an empty dataframe with no columns for when a monitoring
-            # string` series is empty. Not sure what happens to other series empty series, so the condition is if there
+            # string series is empty. Not sure what happens to other series empty series, so the condition is if there
             # are no column names. Then return None such that Restorer knows what to do.
             series_df['timestamp'] = series_df['timestamp'].apply(lambda x: x.timestamp())
             series_df.to_csv(path_or_buf=self.destination / file_id, index=False)

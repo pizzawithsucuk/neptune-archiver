@@ -5,7 +5,8 @@ from src.utils import *
 from pathlib import Path
 
 
-# TODO: - implement option to store and reload form .zip etc. files; ..
+# TODO: implement option to store and reload form .zip etc. files
+# TODO: exception handling
 
 def archive(args):
     destination = args.destination
@@ -16,7 +17,7 @@ def archive(args):
 
 def retrieve(args):
     retriever = Retriever(Path(args.source), args.workspace, args.project_name, args.alternative_sys_namespace)
-    retriever.restore(args.no_project_creation, args.visibility, args.key)
+    retriever.restore((not args.no_project_creation), args.visibility, args.key)
 
 
 def main():
@@ -25,6 +26,7 @@ def main():
     archive_parser = subparsers.add_parser('archive', help='Archive project')
     retrieve_parser = subparsers.add_parser('retrieve', help='Retrieve project from archive and upload it to neptune')
 
+    # archive_parser arguments
     archive_parser.add_argument('--project-id', type=str, help="Name of a project in the form "
                                                                "`workspace-name/project-name`.If left empty,"
                                                                " the value of the NEPTUNE_PROJECT environment"
@@ -37,28 +39,26 @@ def main():
     archive_parser.add_argument('--store-runs-table', action='store_true',
                                 help='whether to include a copy of the runs_table')
 
+    # retrieve_parser arguments
     retrieve_parser.add_argument('--source', type=str,
                                  help='path to neptune archive')
     retrieve_parser.add_argument('--alternative-sys-namespace', type=str, default=None,
                                  help='Namespace for read-only attributes of the archived project. If None, read-only '
                                       'attributes are not uploaded. Applies to both project and run data.'
                                       ' Default: None')
-    retrieve_parser.add_argument('--workspace', type=str, default=None,
-                                 help='Workspace to upload. If None, If left empty, the value of the NEPTUNE_PROJECT '
-                                      'environment variable is used.". Default: None')  # TODO check if this is correct
-    retrieve_parser.add_argument('--project-name', type=str,
-                                 help=f'Project name to upload.')
+    retrieve_parser.add_argument('--workspace', type=str, help='Workspace to upload')  # TODO make a default value
+    retrieve_parser.add_argument('--project-name', type=str, help='Project name to upload.')
+    # TODO make a default value
 
-    retrieve_parser.add_argument('--no-project-creation', action='store_false',
-                                 help='whether to create a new project')
+    retrieve_parser.add_argument('--no-project-creation', action='store_true', help='whether to create a new project')
 
     retrieve_parser.add_argument('--key', type=str, default=None,
-                                 help=f'Key to use when creating object. If None, uses sys/key from {PROJECT_STRUCTURE}. '
-                                      f'Default: None')
+                                 help=f'Key to use when creating object. '
+                                      f'If None, uses sys/key from {PROJECT_STRUCTURE}. Default: None')
 
     retrieve_parser.add_argument('--visibility', type=str, default=None,
                                  help=f'Visibility. If None, uses sys/visibility from {PROJECT_STRUCTURE}. '
-                                      f'Default: None')
+                                      f'Default: None')  # TODO this does not work correctly yet
     args = parser.parse_args()
 
     if args.command == 'archive':
