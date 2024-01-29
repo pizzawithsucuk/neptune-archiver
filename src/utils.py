@@ -5,7 +5,7 @@ class RemoteKeys(Enum):
     ATOMS = 'atoms'
     FILES = 'files'
     FILE_SETS = 'file_sets'
-    FILE_SERIES = 'file_sets'
+    FILE_SERIES = 'file_series'
     TIME_STAMPS = 'time_stamps'
     FLOAT_SERIES = 'float_series'
     STRING_SERIES = 'string_series'

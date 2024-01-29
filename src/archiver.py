@@ -111,6 +111,11 @@ class NeptuneObjArchiver:
             return file_id
         return None
 
+    def fetch_file_series(self, file_series):
+        file_id = str(uuid.uuid4())
+        file_series.download(str(self.destination / file_id))
+        return file_id
+
     def fetch_fileset(self, fileset):
         file_id = str(uuid.uuid4())
         fileset.download(str(self.destination / (file_id + '.zip')))
@@ -123,3 +128,4 @@ class NeptuneObjArchiver:
         file_id = str(uuid.uuid4())
         file.download(str(self.destination / file_id))
         return file_id
+

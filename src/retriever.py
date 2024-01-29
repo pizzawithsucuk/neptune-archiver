@@ -5,6 +5,11 @@ from pathlib import Path
 import json
 import pandas as pd
 from src.utils import RemoteKeys, is_read_only_field
+from neptune.types import File
+
+# TODO make upload of runs same order as in original neptune workspace
+# TODO make upload of file series same order as in original neptune workspace
+# TODO think about how to properly address coherent run ids
 
 
 class Retriever:
@@ -61,7 +66,7 @@ class Retriever:
         self.traverse_files(remote_structure[RemoteKeys.FILES.value], neptune_object, source)
         self.traverse_string_sets(remote_structure[RemoteKeys.STRING_SETS.value], neptune_object)
         self.traverse_file_sets(remote_structure[RemoteKeys.FILE_SETS.value], neptune_object, source)
-        # TODO add traverse file_series
+        self.traverse_file_series(remote_structure[RemoteKeys.FILE_SERIES.value], neptune_object, source)
 
     def traverse_atoms(self, atoms, neptune_object):
         for key in atoms.keys():
@@ -88,6 +93,13 @@ class Retriever:
             neptune_object[key].upload_files(str(source / file_sets[key]))
 
     @staticmethod
+    def traverse_file_series(file_series, neptune_object, source):
+        for key in file_series.keys():
+            for file in (source / file_series[key]).iterdir():
+                if file.is_file():
+                    neptune_object[key].append(File(str(file)))
+
+    @staticmethod
     def traverse_string_series(series, neptune_object, source):
         for key in series.keys():
             if not series[key] is None:  # see comment on fetch_series in archiver.py
@@ -102,4 +114,5 @@ class Retriever:
                 series_df = pd.read_csv(filepath_or_buffer=source / series[key])
                 neptune_object[key].extend(values=series_df['value'].tolist(), steps=series_df['step'].tolist(),
                                            timestamps=series_df['timestamp'].tolist())
+
 
