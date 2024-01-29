@@ -10,6 +10,9 @@ from neptune.types import File
 # TODO make upload of runs same order as in original neptune workspace
 # TODO make upload of file series same order as in original neptune workspace
 # TODO think about how to properly address coherent run ids
+# TODO implement notebooks support
+# TODO implement models support
+# TODO setup test project
 
 
 class Retriever:
