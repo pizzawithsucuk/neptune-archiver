@@ -46,9 +46,8 @@ def main():
                                  help='Namespace for read-only attributes of the archived project. If None, read-only '
                                       'attributes are not uploaded. Applies to both project and run data.'
                                       ' Default: None')
-    retrieve_parser.add_argument('--workspace', type=str, help='Workspace to upload')  # TODO make a default value
+    retrieve_parser.add_argument('--workspace', type=str, help='Workspace to upload')
     retrieve_parser.add_argument('--project-name', type=str, help='Project name to upload.')
-    # TODO make a default value
 
     retrieve_parser.add_argument('--no-project-creation', action='store_true', help='whether to create a new project')
 
@@ -58,7 +57,7 @@ def main():
 
     retrieve_parser.add_argument('--visibility', type=str, default=None,
                                  help=f'Visibility. If None, uses sys/visibility from {PROJECT_STRUCTURE}. '
-                                      f'Default: None')  # TODO this does not work correctly yet
+                                      f'Default: None')
     args = parser.parse_args()
 
     if args.command == 'archive':

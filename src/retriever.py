@@ -8,8 +8,6 @@ from src.utils import RemoteKeys, is_read_only_field, is_value_in_class_attribut
 from neptune.types import File
 
 
-
-
 # TODO make upload of runs same order as in original neptune workspace
 # TODO make upload of file series same order as in original neptune workspace
 # TODO think about how to properly address coherent run ids
@@ -23,7 +21,7 @@ class Retriever:
     def __init__(self, source: Path, workspace: str, project_name: str, alternative_sys_namespace=None):
         self.source = source
         self.workspace = workspace
-        self.project_name = project_name  # TODO make project_name optional parameter
+        self.project_name = project_name
         self.project_id = self.workspace + '/' + self.project_name
         self.alternative_sys_namespace = alternative_sys_namespace
 
