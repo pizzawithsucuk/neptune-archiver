@@ -23,3 +23,11 @@ NEPTUNE_READ_ONLY_FIELDS = {'sys/id', 'sys/monitoring_time', 'sys/owner', 'sys/r
 
 def is_read_only_field(field):
     return field in NEPTUNE_READ_ONLY_FIELDS
+
+
+def is_value_in_class_attributes(value, cls):
+    for attr_name, attr_value in vars(cls).items():
+        if attr_value == value:
+            return True
+    return False
+
