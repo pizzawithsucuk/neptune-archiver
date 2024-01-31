@@ -48,7 +48,7 @@ class Archiver:
 
     def make_archive_log(self):
         archive_info = {'archiver_version': __version__, 'datetime': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        'neptune_version': neptune.__version__}
+                        'neptune_version': neptune.__version__, 'workspace': self.project_id.split('/')[0]}
         with (self.destination / utils.ARCHIVE_INFO).open(mode='w') as json_file:
             json.dump(archive_info, json_file, indent=4)
 

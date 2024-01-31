@@ -7,6 +7,7 @@ from pathlib import Path
 
 # TODO: implement option to store and reload form .zip etc. files
 # TODO: exception handling
+# TODO implement verifier
 
 def archive(args):
     destination = args.destination
@@ -45,7 +46,9 @@ def main():
     retrieve_parser.add_argument('--alternative-sys-namespace', type=str, default=None,
                                  help='Namespace for read-only attributes of the archived project. If None, read-only '
                                       'attributes are not uploaded. Applies to both project and run data.')
-    retrieve_parser.add_argument('--workspace', type=str, help='Workspace to upload')
+    retrieve_parser.add_argument('--workspace', type=str, help='Workspace to upload. If None, fetches workspace '
+                                                               'name from archive.', default=None)
+
     retrieve_parser.add_argument('--project-name', type=str, help='Project name to upload. If None, fetches project '
                                                                   'name from archive.', default=None)
 
@@ -53,11 +56,10 @@ def main():
 
     retrieve_parser.add_argument('--key', type=str, default=None,
                                  help=f'Key to use when creating object. '
-                                      f'If None, uses sys/key from {PROJECT_STRUCTURE}. Default: None')
+                                      f'If None, uses sys/key from {PROJECT_STRUCTURE}.')
 
     retrieve_parser.add_argument('--visibility', type=str, default=None,
-                                 help=f'Visibility. If None, uses sys/visibility from {PROJECT_STRUCTURE}. '
-                                      f'Default: None')
+                                 help=f'Visibility. If None, uses sys/visibility from {PROJECT_STRUCTURE}.')
     args = parser.parse_args()
 
     if args.command == 'archive':

@@ -16,12 +16,11 @@ from datetime import datetime
 # TODO implement models support
 # TODO setup test project
 
-
 class Retriever:
 
     def __init__(self, source: Path, workspace: str, project_name: str, alternative_sys_namespace=None):
         self.source = source
-        self.workspace = workspace
+        self.workspace = self.get_workspace(workspace)
         self.project_name = self.get_project_name(project_name)
         self.project_id = self.workspace + '/' + self.project_name
         self.alternative_sys_namespace = alternative_sys_namespace
@@ -46,7 +45,7 @@ class Retriever:
         if not key:
             key = project_info['atoms'].get('sys/key')
         if not visibility:
-            visibility = project_info['atoms']['sys/key']
+            visibility = project_info['atoms']['sys/visibility']
         # check values
         if not is_value_in_class_attributes(visibility, management.ProjectVisibility):
             print(f'Value for visibility "{visibility}" is not allowed. Setting to '
@@ -133,12 +132,19 @@ class Retriever:
 
     def get_project_name(self, project_name):
         if project_name is None:
-            print('No project-name argument given. Fetching project name from archive.')
+            print('No project-name argument given. Fetching project-name argument from archive.')
             with (self.source / utils.PROJECT_STRUCTURE).open('r') as file:
                 project_structure = json.load(file)
-            project_name = project_structure['sys/name']
+            project_name = project_structure['atoms']['sys/name']
+            print(f'Using {project_name} as project name.')
         return project_name
 
-
-
+    def get_workspace(self, workspace):
+        if workspace is None:
+            print('No workspace argument given. Fetching workspace argument from archive.')
+            with (self.source / utils.ARCHIVE_INFO).open('r') as file:
+                archive_info = json.load(file)
+            workspace = archive_info['workspace']
+            print(f'Using {workspace} as project name.')
+        return workspace
 

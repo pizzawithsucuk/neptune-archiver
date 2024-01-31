@@ -17,8 +17,9 @@ ARCHIVE_INFO = '.archive_info'
 RUN_STRUCTURE = 'run_structure.json'
 RUNS_TABLE = 'runs_table.csv'
 
+# TODO check if this is correct, project/run may be different
 NEPTUNE_READ_ONLY_FIELDS = {'sys/id', 'sys/monitoring_time', 'sys/owner', 'sys/running_time', 'sys/size', 'sys/trashed',
-                            'sys/name', 'sys/visibility'}  # TODO check if this is correct, project/run may be different
+                            'sys/name', 'sys/visibility', 'sys/creation_time', 'sys/modification_time', 'sys/ping_time'}
 
 
 def is_read_only_field(field):
@@ -30,4 +31,3 @@ def is_value_in_class_attributes(value, cls):
         if attr_value == value:
             return True
     return False
-
