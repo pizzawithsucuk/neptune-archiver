@@ -46,7 +46,6 @@ class Retriever:
             key = project_info['atoms'].get('sys/key')
         if not visibility:
             visibility = project_info['atoms']['sys/visibility']
-
         # check values
         if not is_value_in_class_attributes(visibility, management.ProjectVisibility):
             print(f'Value for visibility "{visibility}" is not allowed. Setting to '
