@@ -6,6 +6,7 @@ import json
 import pandas as pd
 from src.utils import RemoteKeys, is_read_only_field, is_value_in_class_attributes
 from neptune.types import File
+from datetime import datetime
 
 
 # TODO make upload of runs same order as in original neptune workspace
@@ -68,6 +69,7 @@ class Retriever:
 
     def traverse_local_structure(self, remote_structure, neptune_object, source):
         self.traverse_atoms(remote_structure[RemoteKeys.ATOMS.value], neptune_object)
+        self.traverse_timestamps(remote_structure[RemoteKeys.TIME_STAMPS.value], neptune_object)
         self.traverse_float_series(remote_structure[RemoteKeys.FLOAT_SERIES.value], neptune_object, source)
         self.traverse_string_series(remote_structure[RemoteKeys.STRING_SERIES.value], neptune_object, source)
         self.traverse_files(remote_structure[RemoteKeys.FILES.value], neptune_object, source)
@@ -81,6 +83,13 @@ class Retriever:
                 neptune_object[key] = atoms[key]
             elif self.alternative_sys_namespace:
                 neptune_object[self.alternative_sys_namespace + '/' + key] = atoms[key]
+
+    def traverse_timestamps(self, atoms, neptune_object):
+        for key in atoms.keys():
+            if not is_read_only_field(key):
+                neptune_object[key] = datetime.fromtimestamp(atoms[key])
+            elif self.alternative_sys_namespace:
+                neptune_object[self.alternative_sys_namespace + '/' + key] = datetime.fromtimestamp(atoms[key])
 
     @staticmethod
     def traverse_string_sets(string_sets, neptune_object):
@@ -124,8 +133,12 @@ class Retriever:
 
     def get_project_name(self, project_name):
         if project_name is None:
-            print('No project_name argument given. Fetching project name from archive.')
+            print('No project-name argument given. Fetching project name from archive.')
             with (self.source / utils.PROJECT_STRUCTURE).open('r') as file:
                 project_structure = json.load(file)
             project_name = project_structure['sys/name']
         return project_name
+
+
+
+
