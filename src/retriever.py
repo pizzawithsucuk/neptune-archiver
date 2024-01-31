@@ -7,7 +7,7 @@ import pandas as pd
 from src.utils import RemoteKeys, is_read_only_field, is_value_in_class_attributes
 from neptune.types import File
 from datetime import datetime
-
+from neptune.management.exceptions import ProjectNameCollision
 
 # TODO make upload of runs same order as in original neptune workspace
 # TODO make upload of file series same order as in original neptune workspace
@@ -46,12 +46,18 @@ class Retriever:
             key = project_info['atoms'].get('sys/key')
         if not visibility:
             visibility = project_info['atoms']['sys/visibility']
+
         # check values
         if not is_value_in_class_attributes(visibility, management.ProjectVisibility):
             print(f'Value for visibility "{visibility}" is not allowed. Setting to '
                   f'"{management.ProjectVisibility.PRIVATE}"')
             visibility = management.ProjectVisibility.PRIVATE
-        management.create_project(workspace=workspace, name=name, key=key, visibility=visibility)
+        try:
+            management.create_project(workspace=workspace, name=name, key=key, visibility=visibility)
+        except ProjectNameCollision:
+            print(f'Project {name} on workspace {workspace} already exists. Consider deleting or, if you only want to'
+                  f' upload archived runs to an existing project, use the --no-project-creation option')
+            raise SystemExit("Exiting the program due to unresolved name conflict.")
 
     def setup_run_upload(self, source):
         with (source / utils.RUN_STRUCTURE).open('r') as file:
