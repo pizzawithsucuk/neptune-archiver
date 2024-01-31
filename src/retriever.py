@@ -21,7 +21,7 @@ class Retriever:
     def __init__(self, source: Path, workspace: str, project_name: str, alternative_sys_namespace=None):
         self.source = source
         self.workspace = workspace
-        self.project_name = project_name
+        self.project_name = self.get_project_name(project_name)
         self.project_id = self.workspace + '/' + self.project_name
         self.alternative_sys_namespace = alternative_sys_namespace
 
@@ -41,7 +41,7 @@ class Retriever:
         with (self.source / utils.PROJECT_STRUCTURE).open('r') as file:
             project_info = json.load(file)
         if not name:
-            name = project_info['atoms']['sys/id']
+            name = project_info['atoms']['sys/name']
         if not key:
             key = project_info['atoms'].get('sys/key')
         if not visibility:
@@ -122,3 +122,10 @@ class Retriever:
                 neptune_object[key].extend(values=series_df['value'].tolist(), steps=series_df['step'].tolist(),
                                            timestamps=series_df['timestamp'].tolist())
 
+    def get_project_name(self, project_name):
+        if project_name is None:
+            print('No project_name argument given. Fetching project name from archive.')
+            with (self.source / utils.PROJECT_STRUCTURE).open('r') as file:
+                project_structure = json.load(file)
+            project_name = project_structure['sys/name']
+        return project_name

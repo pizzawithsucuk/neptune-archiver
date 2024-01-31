@@ -44,10 +44,10 @@ def main():
                                  help='path to neptune archive')
     retrieve_parser.add_argument('--alternative-sys-namespace', type=str, default=None,
                                  help='Namespace for read-only attributes of the archived project. If None, read-only '
-                                      'attributes are not uploaded. Applies to both project and run data.'
-                                      ' Default: None')
+                                      'attributes are not uploaded. Applies to both project and run data.')
     retrieve_parser.add_argument('--workspace', type=str, help='Workspace to upload')
-    retrieve_parser.add_argument('--project-name', type=str, help='Project name to upload.')
+    retrieve_parser.add_argument('--project-name', type=str, help='Project name to upload. If None, fetches project '
+                                                                  'name from archive.', default=None)
 
     retrieve_parser.add_argument('--no-project-creation', action='store_true', help='whether to create a new project')
 

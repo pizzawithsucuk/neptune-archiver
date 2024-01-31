@@ -14,7 +14,7 @@ Make sure you have neptune installed and your neptune api-token is set as an env
 python cli.py archive --destination /path/to/local/dir --project-id workspace/project-name
 
 # Restoring an archived project
-python cli.py retrieve --source /path/to/archived/project --workspace workspace --project-name project-name
+python cli.py retrieve --source /path/to/archived/project --workspace workspace
 ```
 
 ## Warning
