@@ -16,6 +16,7 @@ from neptune.management.exceptions import ProjectNameCollision
 # TODO implement models support
 # TODO setup test project
 
+
 class Retriever:
 
     def __init__(self, source: Path, workspace: str, project_name: str, alternative_sys_namespace=None):
@@ -150,6 +151,6 @@ class Retriever:
             with (self.source / utils.ARCHIVE_INFO).open('r') as file:
                 archive_info = json.load(file)
             workspace = archive_info['workspace']
-            print(f'Using {workspace} as project name.')
+            print(f'Using {workspace} as workspace.')
         return workspace
 
