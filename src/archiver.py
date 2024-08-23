@@ -106,7 +106,7 @@ class NeptuneObjArchiver:
         if not len(series_df.columns) == 0:  # neptune returns an empty dataframe with no columns for when a monitoring
             # string series is empty. Not sure what happens to other series empty series, so the condition is if there
             # are no column names. Then return None such that Restorer knows what to do.
-            series_df['timestamp'] = series_df['timestamp'].apply(lambda x: x.timestamp())
+            series_df['timestamp'] = series_df['timestamp'].apply(lambda x: x.to_pydatetime().timestamp())
             series_df.to_csv(path_or_buf=self.destination / file_id, index=False)
             return file_id
         return None
