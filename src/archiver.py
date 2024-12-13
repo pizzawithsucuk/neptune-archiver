@@ -10,7 +10,7 @@ import zipfile
 import src.utils as utils
 from src.utils import RemoteKeys
 from typing import Optional
-
+from neptune.exceptions import FetchAttributeNotFoundException
 
 # TODO implement multiprocessing
 
@@ -61,6 +61,7 @@ class NeptuneObjArchiver:
         self.local_structure = {remote_key.value: {} for remote_key in RemoteKeys}
         self.destination = destination
 
+
     def archive(self, neptune_structure, string_id):
         self.traverse_neptune_structure(neptune_structure)
         with (self.destination / string_id).open(mode='w') as json_file:
@@ -80,7 +81,15 @@ class NeptuneObjArchiver:
         elif isinstance(value, Datetime):
             self.local_structure[RemoteKeys.TIME_STAMPS.value][concatenated_key] = value.fetch().timestamp()
         elif isinstance(value, StringSet):
-            self.local_structure[RemoteKeys.STRING_SETS.value][concatenated_key] = list(value.fetch())
+            # TODO group tags bugged for some reason
+            try:
+                string_set = list(value.fetch())
+            except FetchAttributeNotFoundException as exception:
+                print(f'During fetching {concatenated_key}, the following exception has occurred:')
+                print(exception)
+                print(f'Setting {concatenated_key} to empty list')
+                string_set = []
+            self.local_structure[RemoteKeys.STRING_SETS.value][concatenated_key] = string_set
         elif isinstance(value, FloatSeries):
             self.local_structure[RemoteKeys.FLOAT_SERIES.value][concatenated_key] = self.fetch_series(value)
         elif isinstance(value, StringSeries):
