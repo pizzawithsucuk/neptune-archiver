@@ -12,7 +12,8 @@ from pathlib import Path
 def archive(args):
     destination = args.destination
     destination = Path(destination) if destination else Path.cwd()
-    archiver = Archiver(destination=destination, project_id=args.project_id, archive_name=args.archive_name)
+    archiver = Archiver(destination=destination, project_id=args.project_id, archive_name=args.archive_name,
+                        num_threads=args.num_threads)
     archiver.archive(store_runs_table=args.store_runs_table)
 
 
@@ -36,9 +37,10 @@ def main():
                                 help='directory where to store archive. if none provided use current working directory')
     archive_parser.add_argument('--archive_name', type=str, help='name of the archive, default name of '
                                                                  'the project is used', default=None)
-
     archive_parser.add_argument('--store-runs-table', action='store_true',
                                 help='whether to include a copy of the runs_table')
+    archive_parser.add_argument('--num_threads', type=int, default=40,
+                                help='number of threads for parallel downloading')
 
     # retrieve_parser arguments
     retrieve_parser.add_argument('--source', type=str,

@@ -11,11 +11,13 @@ import src.utils as utils
 from src.utils import RemoteKeys
 from typing import Optional
 from neptune.exceptions import FetchAttributeNotFoundException
+from concurrent.futures import ThreadPoolExecutor
+
 
 # TODO implement multiprocessing
 
 class Archiver:
-    def __init__(self, destination: Path, archive_name=None, project_id: Optional[str] = None):
+    def __init__(self, destination: Path, archive_name=None, project_id: Optional[str] = None, num_threads=1):
         self.project_id = project_id
         self.project = neptune.init_project(project=self.project_id, mode='read-only')
         self.runs_table = self.project.fetch_runs_table().to_pandas()
@@ -23,6 +25,7 @@ class Archiver:
         if not archive_name:
             archive_name = self.project['sys/name'].fetch()
         self.destination = destination / archive_name
+        self.num_threads = num_threads
         self.destination.mkdir()
 
     def archive(self, store_runs_table=True):
@@ -38,13 +41,19 @@ class Archiver:
         neptune_obj_archiver.archive(project_neptune_structure, utils.PROJECT_STRUCTURE)
 
     def archive_runs(self):
-        for run_id in self.run_ids:
-            run = neptune.init_run(with_id=run_id, project=self.project_id, mode='read-only')
-            run_neptune_structure = run.get_structure()
-            (self.destination / run_id).mkdir()
-            neptune_obj_archiver = NeptuneObjArchiver(destination=self.destination / run_id)
-            neptune_obj_archiver.archive(run_neptune_structure, utils.RUN_STRUCTURE)
-            run.stop()
+        with ThreadPoolExecutor(self.num_threads) as executor:
+            for run_id in self.run_ids:
+                executor.submit(self.archive_run, run_id)
+
+    def archive_run(self, run_id):
+        print(f'archiving {run_id}')
+        run = neptune.init_run(with_id=run_id, project=self.project_id, mode='read-only')
+        run_neptune_structure = run.get_structure()
+        (self.destination / run_id).mkdir()
+        neptune_obj_archiver = NeptuneObjArchiver(destination=self.destination / run_id)
+        neptune_obj_archiver.archive(run_neptune_structure, utils.RUN_STRUCTURE)
+        run.stop()
+        print(f'finished archiving {run_id}')
 
     def make_archive_log(self):
         archive_info = {'archiver_version': __version__, 'datetime': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -56,11 +65,9 @@ class Archiver:
 class NeptuneObjArchiver:
     # Class is used to recursively crawl through a neptune object (run or project) and store all data at a local
     # directory
-
     def __init__(self, destination):
         self.local_structure = {remote_key.value: {} for remote_key in RemoteKeys}
         self.destination = destination
-
 
     def archive(self, neptune_structure, string_id):
         self.traverse_neptune_structure(neptune_structure)
@@ -137,4 +144,3 @@ class NeptuneObjArchiver:
         file_id = str(uuid.uuid4())
         file.download(str(self.destination / file_id))
         return file_id
-
