@@ -39,7 +39,7 @@ def main():
                                                                  'the project is used', default=None)
     archive_parser.add_argument('--store-runs-table', action='store_true',
                                 help='whether to include a copy of the runs_table')
-    archive_parser.add_argument('--num_threads', type=int, default=40,
+    archive_parser.add_argument('--num-threads', type=int, default=40,
                                 help='number of threads for parallel downloading')
 
     # retrieve_parser arguments
@@ -63,6 +63,7 @@ def main():
     retrieve_parser.add_argument('--visibility', type=str, default=None,
                                  help=f'Visibility. If None, uses sys/visibility from {PROJECT_STRUCTURE}.')
     args = parser.parse_args()
+
 
     if args.command == 'archive':
         archive(args)
