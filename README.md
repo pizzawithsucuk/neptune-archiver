@@ -13,7 +13,7 @@ Make sure you have neptune installed and your neptune api-token is set as an env
 # Archiving a nepunte project
 python cli.py archive --destination /path/to/local/dir --project-id workspace/project-name
 # optional parameters: --store-runs-table -> stores a copy of the run table, default False
-                       --num_threads -> number of threads for downloading archive runs -> default 40
+                       --num_threads -> number of threads for downloading archive runs -> default 10
                        
 
 # Restoring an archived project

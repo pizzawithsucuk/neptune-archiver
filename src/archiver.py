@@ -5,16 +5,18 @@ from neptune.attributes import FileSet, Boolean, Datetime, File, Float, GitRef, 
 import uuid
 import json
 from src import __version__
-from datetime import datetime
 import zipfile
 import src.utils as utils
 from src.utils import RemoteKeys
 from typing import Optional
 from neptune.exceptions import FetchAttributeNotFoundException
 from concurrent.futures import ThreadPoolExecutor
+import os
+import logging
 
 
-# TODO implement multiprocessing
+os.environ["TQDM_DISABLE"] = "1"  # disables TQDM output to make sys prints clearer
+
 
 class Archiver:
     def __init__(self, destination: Path, archive_name=None, project_id: Optional[str] = None, num_threads=1):
@@ -27,6 +29,7 @@ class Archiver:
         self.destination = destination / archive_name
         self.num_threads = num_threads
         self.destination.mkdir()
+        utils.configure_logging(self.destination / 'archiving.log')
 
     def archive(self, store_runs_table=True):
         self.make_archive_log()
@@ -46,20 +49,19 @@ class Archiver:
                 executor.submit(self.archive_run, run_id)
 
     def archive_run(self, run_id):
-        print(f'archiving {run_id}')
+        logging.info(f'Start archiving {run_id}')
         run = neptune.init_run(with_id=run_id, project=self.project_id, mode='read-only')
         run_neptune_structure = run.get_structure()
         (self.destination / run_id).mkdir()
         neptune_obj_archiver = NeptuneObjArchiver(destination=self.destination / run_id)
         neptune_obj_archiver.archive(run_neptune_structure, utils.RUN_STRUCTURE)
         run.stop()
-        print(f'finished archiving {run_id}')
+        logging.info(f'Finished archiving {run_id}')
 
     def make_archive_log(self):
-        archive_info = {'archiver_version': __version__, 'datetime': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        'neptune_version': neptune.__version__, 'workspace': self.project_id.split('/')[0]}
-        with (self.destination / utils.ARCHIVE_INFO).open(mode='w') as json_file:
-            json.dump(archive_info, json_file, indent=4)
+        logging.info(f'archiver_version: {__version__}')
+        logging.info(f'neptune_version: {neptune.__version__}')
+        logging.info(f'workspace:{self.project_id.split("/")[0]}')
 
 
 class NeptuneObjArchiver:
@@ -92,9 +94,8 @@ class NeptuneObjArchiver:
             try:
                 string_set = list(value.fetch())
             except FetchAttributeNotFoundException as exception:
-                print(f'During fetching {concatenated_key}, the following exception has occurred:')
-                print(exception)
-                print(f'Setting {concatenated_key} to empty list')
+                logging.warning(  f'During fetching {concatenated_key}, an exception has occurred. '
+                                  f'Setting {concatenated_key} to empty list: {exception}')
                 string_set = []
             self.local_structure[RemoteKeys.STRING_SETS.value][concatenated_key] = string_set
         elif isinstance(value, FloatSeries):

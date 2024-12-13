@@ -1,4 +1,5 @@
 from enum import Enum
+import logging
 
 
 class RemoteKeys(Enum):
@@ -20,6 +21,16 @@ RUNS_TABLE = 'runs_table.csv'
 # TODO check if this is correct, project/run may be different
 NEPTUNE_READ_ONLY_FIELDS = {'sys/id', 'sys/monitoring_time', 'sys/owner', 'sys/running_time', 'sys/size', 'sys/trashed',
                             'sys/name', 'sys/visibility', 'sys/creation_time', 'sys/modification_time', 'sys/ping_time'}
+
+
+def configure_logging(log_filename):
+    # Configure logging to write to a file
+    logging.basicConfig(
+        filename=log_filename,  # Set the filename as a parameter
+        level=logging.INFO,    # Set the logging level
+        format="%(asctime)s - %(levelname)s - %(message)s",  # Format of log messages
+    )
+    logging.info("Logging is configured.")
 
 
 def is_read_only_field(field):

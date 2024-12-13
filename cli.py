@@ -39,7 +39,7 @@ def main():
                                                                  'the project is used', default=None)
     archive_parser.add_argument('--store-runs-table', action='store_true',
                                 help='whether to include a copy of the runs_table')
-    archive_parser.add_argument('--num-threads', type=int, default=40,
+    archive_parser.add_argument('--num-threads', type=int, default=10,
                                 help='number of threads for parallel downloading')
 
     # retrieve_parser arguments
